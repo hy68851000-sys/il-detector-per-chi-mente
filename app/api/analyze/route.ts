@@ -9,7 +9,10 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.ZHIPU_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'API key not configured',
+      hint: 'Please set ZHIPU_API_KEY in Vercel Environment Variables'
+    }, { status: 500 });
   }
 
   try {
@@ -35,7 +38,11 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       const errText = await response.text();
       console.error('Zhipu API error:', response.status, errText);
-      return NextResponse.json({ error: `Zhipu API error: ${response.status}`, details: errText }, { status: 500 });
+      return NextResponse.json({ 
+        error: `Zhipu API error: ${response.status}`, 
+        details: errText,
+        hint: 'Check if ZHIPU_API_KEY is valid'
+      }, { status: 500 });
     }
 
     const data = await response.json();
@@ -43,7 +50,6 @@ export async function POST(request: NextRequest) {
 
     let analysis;
     try {
-      // 提取 JSON（GLM 有时会在 JSON 外加 markdown 代码块）
       const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
       analysis = JSON.parse(jsonMatch ? jsonMatch[0] : rawContent);
     } catch {
@@ -53,6 +59,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, analysis });
   } catch (error: any) {
     console.error('Analyze error:', error);
-    return NextResponse.json({ error: 'Analysis failed', details: error.message }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Analysis failed', 
+      details: error.message 
+    }, { status: 500 });
   }
 }
