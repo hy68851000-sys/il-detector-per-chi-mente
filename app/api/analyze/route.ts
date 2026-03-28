@@ -7,20 +7,20 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Text is required' }, { status: 400 });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
+  const apiKey = process.env.ZHIPU_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
   }
 
   try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'glm-4-flash',
         messages: [{
           role: 'system',
           content: 'You are a lie detection expert. Analyze the text and provide: 1) credibility score (0-100), 2) key indicators (contradictions, emotional patterns, vague language), 3) follow-up questions. You MUST respond with valid JSON only, no extra text. Use this exact format: {"credibility_score": 75, "indicators": ["indicator1", "indicator2"], "questions": ["question1", "question2"]}'
@@ -28,15 +28,14 @@ export async function POST(request: NextRequest) {
           role: 'user',
           content: text
         }],
-        temperature: 0.3,
-        response_format: { type: 'json_object' }
+        temperature: 0.3
       })
     });
 
     if (!response.ok) {
       const errText = await response.text();
-      console.error('OpenAI API error:', response.status, errText);
-      return NextResponse.json({ error: `OpenAI error: ${response.status}`, details: errText }, { status: 500 });
+      console.error('Zhipu API error:', response.status, errText);
+      return NextResponse.json({ error: `Zhipu API error: ${response.status}`, details: errText }, { status: 500 });
     }
 
     const data = await response.json();
@@ -44,7 +43,9 @@ export async function POST(request: NextRequest) {
 
     let analysis;
     try {
-      analysis = JSON.parse(rawContent);
+      // 提取 JSON（GLM 有时会在 JSON 外加 markdown 代码块）
+      const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+      analysis = JSON.parse(jsonMatch ? jsonMatch[0] : rawContent);
     } catch {
       analysis = { credibility_score: 50, indicators: [rawContent], questions: [] };
     }
